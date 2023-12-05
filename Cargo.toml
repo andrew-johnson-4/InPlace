@@ -1,5 +1,5 @@
 [package]
-name = "inplace"
+name = "relog"
 version = "0.0.1"
 authors = ["Andrew <andrew@subarctic.org>"]
 license = "MIT"
@@ -10,4 +10,4 @@ repository = "https://github.com/andrew-johnson-4/InPlace"
 keywords = ["algorithms"]
 
 [[bin]]
-name = "inplace"
+name = "relog"
