@@ -44,3 +44,9 @@ fn substitution() {
 fn unification() {
    assert_eq!(relog("A<b,C<d>>=A<Int,C<Bool>>;R<b>"), "R<Int>");
 }
+
+#[test]
+fn recursion() {
+   assert_eq!(relog("a=B;c=C<a>;c"), "C<B>");  
+   relog("a=A<a,a>;a");
+}

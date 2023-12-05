@@ -100,13 +100,14 @@ pub fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTe
       _ => RelogTerm::Reject,
    }
 }
-pub fn relog_reify(ctx: &HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
+pub fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
    match x {
       RelogTerm::Reject => { RelogTerm::Reject },
       RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
       RelogTerm::Var(x) => {
-         if let Some(r) = ctx.get(&x) { r.clone() }
-         else { RelogTerm::Var(x.clone()) }
+         if let Some(r) = ctx.remove(&x) {
+            relog_reify(ctx,r.clone())
+         } else { RelogTerm::Var(x.clone()) }
       },
       RelogTerm::Compound(x,xs) => {
          RelogTerm::Compound( x.clone(), xs.into_iter().map(|x| relog_reify(ctx,x)).collect::<Vec<RelogTerm>>() )
@@ -122,5 +123,5 @@ pub fn relog(s: &str) -> String {
          return RelogTerm::Reject.to_string();
       }
    }
-   relog_reify(&ctx, p.returns).to_string()
+   relog_reify(&mut ctx, p.returns).to_string()
 }
