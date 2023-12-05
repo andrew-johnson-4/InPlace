@@ -1,4 +1,7 @@
 
+use std::collections::HashMap;
+
+#[derive(PartialEq,Eq,Clone)]
 pub enum RelogTerm {
    Reject,
    Atomic(String),
@@ -75,7 +78,15 @@ pub fn parse_relog_prog(s: &str) -> RelogProg {
    }
 }
 
-pub fn relog(s: &str) -> String {
+pub fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
+   match (l,r) {
+      (RelogTerm::Atomic(l),RelogTerm::Atomic(r)) if l==r => { RelogTerm::Atomic(l.clone()) },
+      (RelogTerm::Var(l),r) => {
+         ctx.insert(l, r.clone());
+         r.clone()
+      },
+      _ => RelogTerm::Reject,
+   }
    /*
    source: https://kti.mff.cuni.cz/%7Ebartak/prolog/data_struct.html
    unify(A,B):-
@@ -93,6 +104,29 @@ pub fn relog(s: &str) -> String {
       unify(A,B),
       unify_args(TA,TB).
    unify_args([],[])
-   */
-   s.to_string()
+   */   
+}
+pub fn relog_reify(ctx: &HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
+   match x {
+      RelogTerm::Reject => { RelogTerm::Reject },
+      RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
+      RelogTerm::Var(x) => {
+         if let Some(r) = ctx.get(&x) { r.clone() }
+         else { RelogTerm::Var(x.clone()) }
+      },
+      RelogTerm::Compound(x,xs) => {
+         RelogTerm::Compound( x.clone(), xs.into_iter().map(|x| relog_reify(ctx,x)).collect::<Vec<RelogTerm>>() )
+      }
+   }
+}
+
+pub fn relog(s: &str) -> String {
+   let mut ctx: HashMap<String,RelogTerm> = HashMap::new();
+   let p = parse_relog_prog(s);
+   for (l,r) in p.bindings {
+      if relog_unify(&mut ctx, l, r) == RelogTerm::Reject {
+         return RelogTerm::Reject.to_string();
+      }
+   }
+   relog_reify(&ctx, p.returns).to_string()
 }
