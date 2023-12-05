@@ -20,6 +20,16 @@ pub struct RelogProg {
    bindings: Vec<(RelogTerm,RelogTerm)>,
    returns: RelogTerm,
 }
+impl RelogProg {
+   pub fn to_string(&self) -> String {
+      let mut s = String::new();
+      for (l,r) in self.bindings.iter() {
+         s += &format!("{}={};",l.to_string(),r.to_string());
+      }
+      s += &self.returns.to_string();
+      s
+   }
+}
 
 pub fn parse_relog_term(s: &str) -> RelogTerm {
    let s = s.as_bytes();
@@ -51,9 +61,17 @@ pub fn parse_relog_term(s: &str) -> RelogTerm {
 }
 
 pub fn parse_relog_prog(s: &str) -> RelogProg {
+   let mut s = s.split(";").collect::<Vec<&str>>();
+   let ret = parse_relog_term(s.pop().unwrap()); //there should always be one string, even if it is empty
+   let mut bindings = Vec::new();
+   for b in s {
+      if let Some((l,r)) = b.split_once("=") {
+         bindings.push( (parse_relog_term(l), parse_relog_term(r)) );
+      }
+   }
    RelogProg {
-      bindings: Vec::new(),
-      returns: RelogTerm::Reject
+      bindings: bindings,
+      returns: ret
    }
 }
 
