@@ -1,6 +1,6 @@
 [package]
 name = "relog"
-version = "0.0.1"
+version = "1.0.0"
 authors = ["Andrew <andrew@subarctic.org>"]
 license = "MIT"
 description = "Strong String Normalization"
