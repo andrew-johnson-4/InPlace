@@ -10,6 +10,7 @@ fn parse_term() {
    assert_eq!(parse_relog_term("A<b>").to_string(), "A<b>");
    assert_eq!(parse_relog_term("A<b,C>").to_string(), "A<b,C>");
    assert_eq!(parse_relog_term("A<b,,>").to_string(), "A<b,!,!>");
+   assert_eq!(parse_relog_term("A<Int,C<Bool>>").to_string(), "A<Int,C<Bool>>");
 }
 
 #[test]

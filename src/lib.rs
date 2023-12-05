@@ -46,8 +46,8 @@ pub fn parse_relog_term(s: &str) -> RelogTerm {
             let mut depth = 0;
             let mut run = String::new();
             for c in tail.bytes() {
-               if c==b'<' { depth += 1; }
-               else if c==b'>' { depth -= 1; }
+               if c==b'<' { depth += 1; run.push(c as char); }
+               else if c==b'>' { depth -= 1; run.push(c as char); }
                else if depth==0 && c==b',' {
                   tail_terms.push(parse_relog_term(&run));
                   run = String::new();
@@ -85,26 +85,20 @@ pub fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTe
          ctx.insert(l, r.clone());
          r.clone()
       },
+      (l,RelogTerm::Var(r)) => {
+         ctx.insert(r, l.clone());
+         l.clone()
+      },
+      (RelogTerm::Compound(lh,lt),RelogTerm::Compound(rh,rt)) if lh==rh && lt.len()==rt.len() => {
+         let mut us = Vec::new();
+         for (lx,rx) in std::iter::zip(lt,rt) {
+            us.push(relog_unify(ctx, lx, rx));
+         }
+         if us.contains(&RelogTerm::Reject) { return RelogTerm::Reject; }
+         RelogTerm::Compound(lh.clone(),us)
+      },
       _ => RelogTerm::Reject,
    }
-   /*
-   source: https://kti.mff.cuni.cz/%7Ebartak/prolog/data_struct.html
-   unify(A,B):-
-      atomic(A),atomic(B),A=B.
-   unify(A,B):-
-      var(A),A=B.            % without occurs check
-   unify(A,B):-
-      nonvar(A),var(B),A=B.  % without occurs check
-   unify(A,B):-
-      compound(A),compound(B),
-      A=..[F|ArgsA],B=..[F|ArgsB],
-      unify_args(ArgsA,ArgsB)
-
-   unify_args([A|TA],[B|TB]):-
-      unify(A,B),
-      unify_args(TA,TB).
-   unify_args([],[])
-   */   
 }
 pub fn relog_reify(ctx: &HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
    match x {
