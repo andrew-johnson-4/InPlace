@@ -105,8 +105,9 @@ pub fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTe
       RelogTerm::Reject => { RelogTerm::Reject },
       RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
       RelogTerm::Var(x) => {
+         let mut ctx = ctx.clone();
          if let Some(r) = ctx.remove(&x) {
-            relog_reify(ctx,r.clone())
+            relog_reify(&mut ctx,r.clone())
          } else { RelogTerm::Var(x.clone()) }
       },
       RelogTerm::Compound(x,xs) => {

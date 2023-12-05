@@ -48,5 +48,6 @@ fn unification() {
 #[test]
 fn recursion() {
    assert_eq!(relog("a=B;c=C<a>;c"), "C<B>");  
+   assert_eq!(relog("a=B;c=C<a,a>;c"), "C<B,B>");  
    relog("a=A<a,a>;a");
 }
