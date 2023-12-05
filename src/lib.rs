@@ -16,6 +16,7 @@ pub fn parse_relog(s: &str) -> RelogTerm {
 
 pub fn relog(s: &str) -> String {
    /*
+   source: https://kti.mff.cuni.cz/%7Ebartak/prolog/data_struct.html
    unify(A,B):-
       atomic(A),atomic(B),A=B.
    unify(A,B):-
