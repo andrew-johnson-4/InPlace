@@ -1,5 +1,5 @@
 
-use inplace::relog;
+use relog::relog;
 
 #[test]
 fn substitution() {
