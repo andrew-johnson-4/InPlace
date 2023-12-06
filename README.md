@@ -16,4 +16,4 @@ R<C>
 
 ![Reduction](https://github.com/andrew-johnson-4/InPlace/blob/main/unifyreify.png)
 
-$$apply \ \ \frac{unify(f,fx)⊢r}{f⇻r⊢reify(r)}$$
+$$apply \ \ \frac{unify(f,fx)⊢r}{f⇻r⊢reify(apply(r))}$$
