@@ -213,5 +213,6 @@ mod tests {
    fn function() {
       assert_eq!(relog("A<b,c>:=R<c>;A<B,C>"), "R<C>");
       relog("A<b>:=A<b>;A<B>");
+      relog("A<b>:=B<a>;B<a>:=A<b>;A<B>")
    }
 }
