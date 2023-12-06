@@ -22,6 +22,7 @@ impl RelogTerm {
 
 struct RelogProg {
    bindings: Vec<(RelogTerm,RelogTerm)>,
+   unifications: Vec<(RelogTerm,RelogTerm)>,
    returns: RelogTerm,
 }
 #[cfg(test)]
@@ -29,6 +30,9 @@ impl RelogProg {
    pub fn to_string(&self) -> String {
       let mut s = String::new();
       for (l,r) in self.bindings.iter() {
+         s += &format!("{}:={};",l.to_string(),r.to_string());
+      }
+      for (l,r) in self.unifications.iter() {
          s += &format!("{}={};",l.to_string(),r.to_string());
       }
       s += &self.returns.to_string();
@@ -39,7 +43,7 @@ impl RelogProg {
 fn parse_relog_term(s: &str) -> RelogTerm {
    let s = s.as_bytes();
    if s.len()==0 { RelogTerm::Reject }
-   else if "<>,;=".contains(s[0] as char) { RelogTerm::Reject }
+   else if "<>,:;=".contains(s[0] as char) { RelogTerm::Reject }
    else if s[0].is_ascii_lowercase() { RelogTerm::Var(std::str::from_utf8(s).unwrap().to_string()) }
    else if s[0].is_ascii_uppercase() {
       if s[s.len()-1] == b'>' {
@@ -69,32 +73,36 @@ fn parse_relog_prog(s: &str) -> RelogProg {
    let mut s = s.split(";").collect::<Vec<&str>>();
    let ret = parse_relog_term(s.pop().unwrap()); //there should always be one string, even if it is empty
    let mut bindings = Vec::new();
+   let mut unifications = Vec::new();
    for b in s {
-      if let Some((l,r)) = b.split_once("=") {
+      if let Some((l,r)) = b.split_once(":=") {
          bindings.push( (parse_relog_term(l), parse_relog_term(r)) );
+      } else if let Some((l,r)) = b.split_once("=") {
+         unifications.push( (parse_relog_term(l), parse_relog_term(r)) );
       }
    }
    RelogProg {
       bindings: bindings,
+      unifications: unifications,
       returns: ret
    }
 }
 
-fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
-   match (l,r) {
+fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
+   match (&l,&r) {
       (RelogTerm::Atomic(l),RelogTerm::Atomic(r)) if l==r => { RelogTerm::Atomic(l.clone()) },
-      (RelogTerm::Var(l),r) => {
-         ctx.insert(l, r.clone());
+      (RelogTerm::Var(_),r) => {
+         ctx.insert(l.clone(), r.clone());
          r.clone()
       },
-      (l,RelogTerm::Var(r)) => {
-         ctx.insert(r, l.clone());
+      (l,RelogTerm::Var(_)) => {
+         ctx.insert(r.clone(), l.clone());
          l.clone()
       },
       (RelogTerm::Compound(lh,lt),RelogTerm::Compound(rh,rt)) if lh==rh && lt.len()==rt.len() => {
          let mut us = Vec::new();
          for (lx,rx) in std::iter::zip(lt,rt) {
-            us.push(relog_unify(ctx, lx, rx));
+            us.push(relog_unify(ctx, lx.clone(), rx.clone()));
          }
          if us.contains(&RelogTerm::Reject) { return RelogTerm::Reject; }
          RelogTerm::Compound(lh.clone(),us)
@@ -122,6 +130,11 @@ fn relog_reify(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
 pub fn relog(s: &str) -> String {
    let p = parse_relog_prog(s);
    let mut ctx: HashMap<RelogTerm,RelogTerm> = p.bindings.into_iter().collect();
+   for (l,r) in p.unifications {
+      if relog_unify(&mut ctx, l, r) == RelogTerm::Reject {
+         return RelogTerm::Reject.to_string();
+      }
+   }
    relog_reify(&mut ctx, p.returns).to_string()
 }
 
