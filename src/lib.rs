@@ -1,7 +1,8 @@
 
+
 use std::collections::HashMap;
 
-#[derive(PartialEq,Eq,Clone)]
+#[derive(PartialEq,Eq,Clone,Hash)]
 enum RelogTerm {
    Reject,
    Atomic(String),
@@ -102,15 +103,15 @@ fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTerm) 
    }
 }
 
-fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
+fn relog_reify(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
    match x {
       RelogTerm::Reject => { RelogTerm::Reject },
       RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
-      RelogTerm::Var(x) => {
+      RelogTerm::Var(_) => {
          let mut ctx = ctx.clone();
          if let Some(r) = ctx.remove(&x) {
             relog_reify(&mut ctx,r.clone())
-         } else { RelogTerm::Var(x.clone()) }
+         } else { x.clone() }
       },
       RelogTerm::Compound(x,xs) => {
          RelogTerm::Compound( x.clone(), xs.into_iter().map(|x| relog_reify(ctx,x)).collect::<Vec<RelogTerm>>() )
@@ -119,13 +120,8 @@ fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
 }
 
 pub fn relog(s: &str) -> String {
-   let mut ctx: HashMap<String,RelogTerm> = HashMap::new();
    let p = parse_relog_prog(s);
-   for (l,r) in p.bindings {
-      if relog_unify(&mut ctx, l, r) == RelogTerm::Reject {
-         return RelogTerm::Reject.to_string();
-      }
-   }
+   let mut ctx: HashMap<RelogTerm,RelogTerm> = p.bindings.into_iter().collect();
    relog_reify(&mut ctx, p.returns).to_string()
 }
 
