@@ -44,7 +44,6 @@ fn parse_relog_term(s: &str) -> RelogTerm {
    let s = s.as_bytes();
    if s.len()==0 { RelogTerm::Reject }
    else if "<>,:;=".contains(s[0] as char) { RelogTerm::Reject }
-   else if s[0].is_ascii_lowercase() { RelogTerm::Var(std::str::from_utf8(s).unwrap().to_string()) }
    else if s[0].is_ascii_uppercase() {
       if s[s.len()-1] == b'>' {
          if let Some((head,tail)) = std::str::from_utf8( &s[..s.len()-1] ).unwrap().to_string().split_once('<') {
@@ -66,7 +65,7 @@ fn parse_relog_term(s: &str) -> RelogTerm {
          RelogTerm::Atomic(std::str::from_utf8(s).unwrap().to_string())
       }
    }
-   else { RelogTerm::Reject }
+   else { RelogTerm::Var(std::str::from_utf8(s).unwrap().to_string()) }
 }
 
 fn parse_relog_prog(s: &str) -> RelogProg {
@@ -91,6 +90,7 @@ fn parse_relog_prog(s: &str) -> RelogProg {
 fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
    for (k,v) in ctx.iter() {
       if let RelogTerm::Var(_) = k { continue; }
+      if let RelogTerm::Var(_) = x { continue; }
       let mut ctx = ctx.clone();
       ctx.remove(k).unwrap();
       let u = relog_unify(&mut ctx, k.clone(), x.clone());
@@ -141,13 +141,29 @@ fn relog_reify(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
    }
 }
 
+fn unpack_bindings(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) {
+   match x {
+      RelogTerm::Compound(g,gs) => {
+         if g=="Bind" && gs.len()==2 {
+            ctx.insert( gs[0].clone(), gs[1].clone() );
+         }
+         for gx in gs.iter() {
+            unpack_bindings(ctx, gx.clone());
+         }
+      },
+      _ => (),
+   }
+}
+
 pub fn relog(s: &str) -> String {
    let p = parse_relog_prog(s);
    let mut ctx: HashMap<RelogTerm,RelogTerm> = p.bindings.into_iter().collect();
    for (l,r) in p.unifications {
-      if relog_unify(&mut ctx, l, r) == RelogTerm::Reject {
+      let x = relog_unify(&mut ctx, l.clone(), r.clone());
+      if x == RelogTerm::Reject {
          return RelogTerm::Reject.to_string();
       }
+      unpack_bindings(&mut ctx, x);
    }
    let r = relog_apply(&mut ctx, p.returns);   
    relog_reify(&mut ctx, r).to_string()
@@ -191,6 +207,7 @@ mod tests {
       assert_eq!(parse_relog_prog("").to_string(), "!");
       assert_eq!(parse_relog_prog(";").to_string(), "!");
       assert_eq!(parse_relog_prog("x;").to_string(), "!");
+      assert_eq!(parse_relog_prog("F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z").to_string(), "F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z");
    }
 
    #[test]
@@ -215,5 +232,11 @@ mod tests {
       assert_eq!(relog("A<b,c>:=R<c>;A<B,C>"), "R<C>");
       relog("A<b>:=A<b>;A<B>");
       relog("A<b>:=B<a>;B<a>:=A<b>;A<B>");
+   }
+
+   #[test]
+   fn staged_bindings() {
+      assert_eq!(relog("F<x>:=Bind<G<y>,y>;x=F<1>;x"), "Bind<G<y>,y>");
+      assert_eq!(relog("F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z"), "2");
    }
 }
