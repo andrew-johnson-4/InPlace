@@ -13,3 +13,5 @@ $$reify \ bound \ var \ \ \frac{a↦B⊢a}{a⇻B⊢reify(B)}$$
 $$reify \ free \ var \ \ \frac{⊢a}{⊢a}$$
 
 $$reify \ compound \ \ \frac{⊢reify(A \langle B.. \rangle)}{⊢A \langle b∈B..reify(b) \rangle}$$
+
+$$apply \ \ \frac{unify(f,fx)⊢r}{f⇻r⊢reify(apply(r))}$$
