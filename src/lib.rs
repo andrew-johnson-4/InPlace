@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 #[derive(PartialEq,Eq,Clone)]
-pub enum RelogTerm {
+enum RelogTerm {
    Reject,
    Atomic(String),
    Var(String),
@@ -19,10 +19,11 @@ impl RelogTerm {
    }
 }
 
-pub struct RelogProg {
+struct RelogProg {
    bindings: Vec<(RelogTerm,RelogTerm)>,
    returns: RelogTerm,
 }
+#[cfg(test)]
 impl RelogProg {
    pub fn to_string(&self) -> String {
       let mut s = String::new();
@@ -34,7 +35,7 @@ impl RelogProg {
    }
 }
 
-pub fn parse_relog_term(s: &str) -> RelogTerm {
+fn parse_relog_term(s: &str) -> RelogTerm {
    let s = s.as_bytes();
    if s.len()==0 { RelogTerm::Reject }
    else if "<>,;=".contains(s[0] as char) { RelogTerm::Reject }
@@ -63,7 +64,7 @@ pub fn parse_relog_term(s: &str) -> RelogTerm {
    else { RelogTerm::Reject }
 }
 
-pub fn parse_relog_prog(s: &str) -> RelogProg {
+fn parse_relog_prog(s: &str) -> RelogProg {
    let mut s = s.split(";").collect::<Vec<&str>>();
    let ret = parse_relog_term(s.pop().unwrap()); //there should always be one string, even if it is empty
    let mut bindings = Vec::new();
@@ -78,7 +79,7 @@ pub fn parse_relog_prog(s: &str) -> RelogProg {
    }
 }
 
-pub fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
+fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
    match (l,r) {
       (RelogTerm::Atomic(l),RelogTerm::Atomic(r)) if l==r => { RelogTerm::Atomic(l.clone()) },
       (RelogTerm::Var(l),r) => {
@@ -100,7 +101,8 @@ pub fn relog_unify(ctx: &mut HashMap<String,RelogTerm>, l: RelogTerm, r: RelogTe
       _ => RelogTerm::Reject,
    }
 }
-pub fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
+
+fn relog_reify(ctx: &mut HashMap<String,RelogTerm>, x: RelogTerm) -> RelogTerm {
    match x {
       RelogTerm::Reject => { RelogTerm::Reject },
       RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
@@ -125,4 +127,60 @@ pub fn relog(s: &str) -> String {
       }
    }
    relog_reify(&mut ctx, p.returns).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn parse_term() {
+      assert_eq!(parse_relog_term("a").to_string(), "a");
+      assert_eq!(parse_relog_term("ab").to_string(), "ab");
+      assert_eq!(parse_relog_term("A").to_string(), "A");
+      assert_eq!(parse_relog_term("Ab").to_string(), "Ab");
+      assert_eq!(parse_relog_term("A<b>").to_string(), "A<b>");
+      assert_eq!(parse_relog_term("A<b,C>").to_string(), "A<b,C>");
+      assert_eq!(parse_relog_term("A<b,,>").to_string(), "A<b,!,!>");
+      assert_eq!(parse_relog_term("A<Int,C<Bool>>").to_string(), "A<Int,C<Bool>>");
+   }
+
+   #[test]
+   fn parse_prog() {
+      assert_eq!(parse_relog_prog("a").to_string(), "a");
+      assert_eq!(parse_relog_prog("ab").to_string(), "ab");
+      assert_eq!(parse_relog_prog("A").to_string(), "A");
+      assert_eq!(parse_relog_prog("Ab").to_string(), "Ab");
+      assert_eq!(parse_relog_prog("A<b>").to_string(), "A<b>");
+      assert_eq!(parse_relog_prog("A<b,C>").to_string(), "A<b,C>");
+      assert_eq!(parse_relog_prog("A<b,,>").to_string(), "A<b,!,!>");
+
+      assert_eq!(parse_relog_prog("x=y;a").to_string(), "x=y;a");
+      assert_eq!(parse_relog_prog("x=y;ab").to_string(), "x=y;ab");
+      assert_eq!(parse_relog_prog("x=y;A").to_string(), "x=y;A");
+      assert_eq!(parse_relog_prog("x=y;Ab").to_string(), "x=y;Ab");
+      assert_eq!(parse_relog_prog("x=y;A<b>").to_string(), "x=y;A<b>");
+      assert_eq!(parse_relog_prog("x=y;A<b,C>").to_string(), "x=y;A<b,C>");
+      assert_eq!(parse_relog_prog("x=y;A<b,,>").to_string(), "x=y;A<b,!,!>");
+      assert_eq!(parse_relog_prog("").to_string(), "!");
+      assert_eq!(parse_relog_prog(";").to_string(), "!");
+      assert_eq!(parse_relog_prog("x;").to_string(), "!");
+   }
+
+   #[test]
+   fn substitution() {
+      assert_eq!(relog("a=Int;T<a>"), "T<Int>");
+   }
+
+   #[test]
+   fn unification() {
+      assert_eq!(relog("A<b,C<d>>=A<Int,C<Bool>>;R<b>"), "R<Int>");
+   }
+
+   #[test]
+   fn recursion() {
+      assert_eq!(relog("a=B;c=C<a>;c"), "C<B>");
+      assert_eq!(relog("a=B;c=C<a,a>;c"), "C<B,B>");
+      relog("a=A<a,a>;a");
+   }
 }
