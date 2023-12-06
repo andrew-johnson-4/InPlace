@@ -162,6 +162,7 @@ mod tests {
       assert_eq!(parse_relog_prog("x=y;A<b>").to_string(), "x=y;A<b>");
       assert_eq!(parse_relog_prog("x=y;A<b,C>").to_string(), "x=y;A<b,C>");
       assert_eq!(parse_relog_prog("x=y;A<b,,>").to_string(), "x=y;A<b,!,!>");
+      assert_eq!(parse_relog_prog("A<b,c>=R<d>;A<B>").to_string(), "A<b,c>=R<d>;A<B>");
       assert_eq!(parse_relog_prog("").to_string(), "!");
       assert_eq!(parse_relog_prog(";").to_string(), "!");
       assert_eq!(parse_relog_prog("x;").to_string(), "!");
@@ -182,5 +183,10 @@ mod tests {
       assert_eq!(relog("a=B;c=C<a>;c"), "C<B>");
       assert_eq!(relog("a=B;c=C<a,a>;c"), "C<B,B>");
       relog("a=A<a,a>;a");
+   }
+
+   #[test]
+   fn function() {
+      assert_eq!(relog("A<b,c>=R<c>;A<B,C>"), "R<C>");
    }
 }
