@@ -95,7 +95,8 @@ fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
       ctx.remove(k).unwrap();
       let u = relog_unify(&mut ctx, k.clone(), x.clone());
       if u != RelogTerm::Reject {
-         return relog_reify(&mut ctx, v.clone());
+         let r = relog_apply(&mut ctx, v.clone());
+         return relog_reify(&mut ctx, r);
       }
    }
    x.clone()
