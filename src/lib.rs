@@ -88,15 +88,28 @@ fn parse_relog_prog(s: &str) -> RelogProg {
    }
 }
 
+fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
+   for (k,v) in ctx.iter() {
+      if let RelogTerm::Var(_) = k { continue; }
+      let mut ctx = ctx.clone();
+      ctx.remove(k).unwrap();
+      let u = relog_unify(&mut ctx, k.clone(), x.clone());
+      if u != RelogTerm::Reject {
+         return relog_reify(&mut ctx, v.clone());
+      }
+   }
+   x.clone()
+}
+
 fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
-   match (&l,&r) {
+   match (relog_apply(ctx, l),relog_apply(ctx, r)) {
       (RelogTerm::Atomic(l),RelogTerm::Atomic(r)) if l==r => { RelogTerm::Atomic(l.clone()) },
-      (RelogTerm::Var(_),r) => {
-         ctx.insert(l.clone(), r.clone());
+      (RelogTerm::Var(l),r) => {
+         ctx.insert(RelogTerm::Var(l), r.clone());
          r.clone()
       },
-      (l,RelogTerm::Var(_)) => {
-         ctx.insert(r.clone(), l.clone());
+      (l,RelogTerm::Var(r)) => {
+         ctx.insert(RelogTerm::Var(r), l.clone());
          l.clone()
       },
       (RelogTerm::Compound(lh,lt),RelogTerm::Compound(rh,rt)) if lh==rh && lt.len()==rt.len() => {
@@ -135,7 +148,8 @@ pub fn relog(s: &str) -> String {
          return RelogTerm::Reject.to_string();
       }
    }
-   relog_reify(&mut ctx, p.returns).to_string()
+   let r = relog_apply(&mut ctx, p.returns);   
+   relog_reify(&mut ctx, r).to_string()
 }
 
 #[cfg(test)]
@@ -198,5 +212,6 @@ mod tests {
    #[test]
    fn function() {
       assert_eq!(relog("A<b,c>:=R<c>;A<B,C>"), "R<C>");
+      relog("A<b>:=A<b>;A<B>");
    }
 }
