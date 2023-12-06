@@ -103,7 +103,7 @@ fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
 
 fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
    match (relog_apply(ctx, l),relog_apply(ctx, r)) {
-      (RelogTerm::Atomic(l),RelogTerm::Atomic(r)) if l==r => { RelogTerm::Atomic(l.clone()) },
+      (l,r) if l==r => { l.clone() },
       (RelogTerm::Var(l),r) => {
          ctx.insert(RelogTerm::Var(l), r.clone());
          r.clone()
@@ -213,6 +213,6 @@ mod tests {
    fn function() {
       assert_eq!(relog("A<b,c>:=R<c>;A<B,C>"), "R<C>");
       relog("A<b>:=A<b>;A<B>");
-      relog("A<b>:=B<a>;B<a>:=A<b>;A<B>")
+      relog("A<b>:=B<a>;B<a>:=A<b>;A<B>");
    }
 }
