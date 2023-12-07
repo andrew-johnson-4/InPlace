@@ -14,7 +14,7 @@ A<b,c>:=R<c>;A<B,C>
 R<C>
 
 Print<"hello world">
-[stdout] hello world
+[stdout]hello world
 0
 
 For<n,99,0,
