@@ -78,6 +78,7 @@ fn parse_relog_term(s: &str) -> RelogTerm {
 }
 
 fn parse_relog_prog(s: &str) -> RelogProg {
+   let s = s.to_string().replace(" ","").replace("\n","");
    let mut s = s.split(";").collect::<Vec<&str>>();
    let ret = parse_relog_term(s.pop().unwrap()); //there should always be one string, even if it is empty
    let mut bindings = Vec::new();
