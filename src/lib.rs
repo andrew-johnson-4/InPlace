@@ -54,7 +54,9 @@ fn parse_relog_term(s: &str) -> RelogTerm {
    let s = s.as_bytes();
    if s.len()==0 { RelogTerm::Reject }
    else if "<>,:;=".contains(s[0] as char) { RelogTerm::Reject }
-   else if s[0].is_ascii_uppercase() {
+   else if s[0].is_ascii_lowercase() || s[0]==b'_' {
+      RelogTerm::Var(std::str::from_utf8(s).unwrap().to_string())
+   } else {
       if s[s.len()-1] == b'>' {
          if let Some((head,tail)) = std::str::from_utf8( &s[..s.len()-1] ).unwrap().to_string().split_once('<') {
             let mut tail_terms = Vec::new();
@@ -75,7 +77,6 @@ fn parse_relog_term(s: &str) -> RelogTerm {
          RelogTerm::Atomic(std::str::from_utf8(s).unwrap().to_string())
       }
    }
-   else { RelogTerm::Var(std::str::from_utf8(s).unwrap().to_string()) }
 }
 
 fn parse_relog_prog(s: &str) -> RelogProg {
