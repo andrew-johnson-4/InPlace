@@ -220,6 +220,7 @@ mod tests {
       assert_eq!(parse_relog_prog(";").to_string(), "!");
       assert_eq!(parse_relog_prog("x;").to_string(), "!");
       assert_eq!(parse_relog_prog("F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z").to_string(), "F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z");
+      assert_eq!(parse_relog_prog("F<x>:=Bind<G<y>,y>; _=F<1>;\nz=G<2>;z").to_string(), "F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z");
    }
 
    #[test]
