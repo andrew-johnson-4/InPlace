@@ -12,6 +12,18 @@ R<Int>
 
 A<b,c>:=R<c>;A<B,C>
 R<C>
+
+Print<"hello world">
+[stdout] hello world
+0
+
+For<n,99,0,Print<"{n} bottles of beer on the wall
+{n} bottles of beer
+Take one down, pass it around
+{n} bottles of beer on the wall">>
+[stdout]99 bottles of beer on the wall
+...
+0
 ```
 
 ![Reduction](https://github.com/andrew-johnson-4/InPlace/blob/main/unifyreify.png)
