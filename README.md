@@ -17,10 +17,12 @@ Print<"hello world">
 [stdout] hello world
 0
 
-For<n,99,0,Print<"{n} bottles of beer on the wall
-{n} bottles of beer
-Take one down, pass it around
-{n} bottles of beer on the wall">>
+For<n,99,0,
+   Print<"{n} bottles of beer on the wall
+        \r{n} bottles of beer
+        \rTake one down, pass it around
+        \r{n} bottles of beer on the wall">
+>
 [stdout]99 bottles of beer on the wall
 ...
 0
