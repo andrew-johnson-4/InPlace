@@ -11,3 +11,6 @@ keywords = ["algorithms"]
 
 [[bin]]
 name = "relog"
+
+[dependencies]
+itertools = { version = "0.12" }

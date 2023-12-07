@@ -9,9 +9,10 @@ the code and IP as they would like. Please, just be nice.
 
 */
 
+use itertools::Itertools;
 use std::collections::HashMap;
 
-#[derive(PartialEq,Eq,Clone,Hash)]
+#[derive(PartialEq,Eq,Clone,Hash,PartialOrd,Ord)]
 enum RelogTerm {
    Reject,
    Atomic(String),
@@ -38,10 +39,10 @@ struct RelogProg {
 impl RelogProg {
    pub fn to_string(&self) -> String {
       let mut s = String::new();
-      for (l,r) in self.bindings.iter() {
+      for (l,r) in self.bindings.iter().sorted_by_key(|x| &x.0) {
          s += &format!("{}:={};",l.to_string(),r.to_string());
       }
-      for (l,r) in self.unifications.iter() {
+      for (l,r) in self.unifications.iter().sorted_by_key(|x| &x.0) {
          s += &format!("{}={};",l.to_string(),r.to_string());
       }
       s += &self.returns.to_string();
@@ -98,7 +99,7 @@ fn parse_relog_prog(s: &str) -> RelogProg {
 }
 
 fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
-   for (k,v) in ctx.iter() {
+   for (k,v) in ctx.iter().sorted_by_key(|x| x.0) {
       if let RelogTerm::Var(_) = k { continue; }
       if let RelogTerm::Var(_) = x { continue; }
       let mut ctx = ctx.clone();
