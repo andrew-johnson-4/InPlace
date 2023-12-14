@@ -86,7 +86,9 @@ fn parse_relog_prog(s: &str) -> RelogProg {
    let mut bindings = Vec::new();
    let mut unifications = Vec::new();
    for b in s {
-      if let Some((l,r)) = b.split_once(":=") {
+      if b.starts_with("#") {
+         //comment - ignore
+      } else if let Some((l,r)) = b.split_once(":=") {
          bindings.push( (parse_relog_term(l), parse_relog_term(r)) );
       } else if let Some((l,r)) = b.split_once("=") {
          unifications.push( (parse_relog_term(l), parse_relog_term(r)) );
@@ -115,7 +117,7 @@ fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
 }
 
 fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
-   match (relog_apply(ctx, l),relog_apply(ctx, r)) {
+   match (l,r) {
       (l,r) if l==r => { l.clone() },
       (RelogTerm::Var(l),r) => {
          ctx.insert(RelogTerm::Var(l), r.clone());
@@ -171,6 +173,8 @@ pub fn relog(s: &str) -> String {
    let p = parse_relog_prog(s);
    let mut ctx: HashMap<RelogTerm,RelogTerm> = p.bindings.into_iter().collect();
    for (l,r) in p.unifications {
+      let l = relog_apply(&mut ctx, l.clone());
+      let r = relog_apply(&mut ctx, r.clone());
       let x = relog_unify(&mut ctx, l.clone(), r.clone());
       if x == RelogTerm::Reject {
          return RelogTerm::Reject.to_string();
