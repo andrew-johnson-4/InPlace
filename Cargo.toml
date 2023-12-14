@@ -1,6 +1,6 @@
 [package]
 name = "relog"
-version = "1.0.9"
+version = "1.0.10"
 authors = ["Andrew <andrew@subarctic.org>"]
 license = "MIT"
 description = "Strong String Normalization"
@@ -11,6 +11,3 @@ keywords = ["algorithms"]
 
 [[bin]]
 name = "relog"
-
-[dependencies]
-itertools = { version = "0.12" }

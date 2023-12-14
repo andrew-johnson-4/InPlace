@@ -9,8 +9,73 @@ the code and IP as they would like. Please, just be nice.
 
 */
 
-use itertools::Itertools;
-use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::collections::{HashMap,HashSet};
+
+struct Context {
+   parent: Option<Rc<Context>>,
+   block: RefCell<HashSet<RelogTerm>>,
+   bind: RefCell<HashMap<RelogTerm,RelogTerm>>,
+}
+impl Context {
+   fn get<'a>(slf: &'a Rc<Context>, k: &RelogTerm) -> Option<RelogTerm> {
+      let mut result = None;
+      let mut ctx = Some(slf.clone());
+      while let Some(c) = ctx {
+         if let Some(r) = c.bind.borrow().get(k).cloned() {
+            result = Some(r);
+         }
+         ctx = c.parent.clone();
+      }
+      let mut ctx = Some(slf.clone());
+      while let Some(c) = ctx {
+         if let Some(_) = c.block.borrow().get(k).cloned() {
+            return None;
+         }
+         ctx = c.parent.clone();
+      }
+      result
+   }
+   fn insert(slf: &Rc<Context>, k: RelogTerm, v: RelogTerm) {
+      slf.bind.borrow_mut().insert(k, v); ()
+   }
+   fn remove(slf: &Rc<Context>, k: &RelogTerm) {
+      slf.block.borrow_mut().insert(k.clone()); ()
+   }
+   fn clone(slf: &Rc<Context>) -> Rc<Context> {
+      Rc::new(Context {
+         parent: Some(slf.clone()),
+         block: RefCell::new(HashSet::new()),
+         bind: RefCell::new(HashMap::new()),
+      })
+   }
+   fn new() -> Rc<Context> {
+      Rc::new(Context {
+         parent: None,
+         block: RefCell::new(HashSet::new()),
+         bind: RefCell::new(HashMap::new()),
+      })
+   }
+   fn iter(slf: &Rc<Context>) -> HashMap<RelogTerm,RelogTerm> {
+      let mut result = HashMap::new();
+      let mut ctx = Some(slf.clone());
+      while let Some(c) = ctx {
+         for (k,v) in c.bind.borrow().iter() {
+            result.insert(k.clone(), v.clone());
+         }
+         ctx = c.parent.clone();
+      }
+      let mut ctx = Some(slf.clone());
+      while let Some(c) = ctx {
+         for k in c.block.borrow().iter() {
+            result.remove(k);
+         }
+         ctx = c.parent.clone();
+      }
+      result
+   }
+}
 
 #[derive(PartialEq,Eq,Clone,Hash,PartialOrd,Ord)]
 enum RelogTerm {
@@ -39,10 +104,10 @@ struct RelogProg {
 impl RelogProg {
    pub fn to_string(&self) -> String {
       let mut s = String::new();
-      for (l,r) in self.bindings.iter().sorted_by_key(|x| &x.0) {
+      for (l,r) in self.bindings.iter() {
          s += &format!("{}:={};",l.to_string(),r.to_string());
       }
-      for (l,r) in self.unifications.iter().sorted_by_key(|x| &x.0) {
+      for (l,r) in self.unifications.iter() {
          s += &format!("{}={};",l.to_string(),r.to_string());
       }
       s += &self.returns.to_string();
@@ -101,30 +166,30 @@ fn parse_relog_prog(s: &str) -> RelogProg {
    }
 }
 
-fn relog_apply(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
-   for (k,v) in ctx.iter().sorted_by_key(|x| x.0) {
+fn relog_apply(ctx: &Rc<Context>, x: RelogTerm) -> RelogTerm {
+   for (k,v) in Context::iter(&ctx) {
       if let RelogTerm::Var(_) = k { continue; }
       if let RelogTerm::Var(_) = x { continue; }
-      let mut ctx = ctx.clone();
-      ctx.remove(k).unwrap();
-      let u = relog_unify(&mut ctx, k.clone(), x.clone());
+      let ctx = Context::clone(&ctx);
+      Context::remove(&ctx, &k);
+      let u = relog_unify(&ctx, k.clone(), x.clone());
       if u != RelogTerm::Reject {
-         let r = relog_apply(&mut ctx, v.clone());
-         return relog_reify(&mut ctx, r);
+         let r = relog_apply(&ctx, v.clone());
+         return relog_reify(&ctx, r);
       }
    }
    x.clone()
 }
 
-fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
+fn relog_unify(ctx: &Rc<Context>, l: RelogTerm, r: RelogTerm) -> RelogTerm {
    match (l,r) {
       (l,r) if l==r => { l.clone() },
       (RelogTerm::Var(l),r) => {
-         ctx.insert(RelogTerm::Var(l), r.clone());
+         Context::insert(&ctx, RelogTerm::Var(l), r.clone());
          r.clone()
       },
       (l,RelogTerm::Var(r)) => {
-         ctx.insert(RelogTerm::Var(r), l.clone());
+         Context::insert(&ctx, RelogTerm::Var(r), l.clone());
          l.clone()
       },
       (RelogTerm::Compound(lh,lt),RelogTerm::Compound(rh,rt)) if lh==rh && lt.len()==rt.len() => {
@@ -139,14 +204,15 @@ fn relog_unify(ctx: &mut HashMap<RelogTerm,RelogTerm>, l: RelogTerm, r: RelogTer
    }
 }
 
-fn relog_reify(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTerm {
+fn relog_reify(ctx: &Rc<Context>, x: RelogTerm) -> RelogTerm {
    match x {
       RelogTerm::Reject => { RelogTerm::Reject },
       RelogTerm::Atomic(x) => { RelogTerm::Atomic(x.clone()) },
       RelogTerm::Var(_) => {
-         let mut ctx = ctx.clone();
-         if let Some(r) = ctx.remove(&x) {
-            relog_reify(&mut ctx,r.clone())
+         let ctx = Context::clone(&ctx);
+         if let Some(r) = Context::get(&ctx,&x) {
+            Context::remove(&ctx,&x);
+            relog_reify(&ctx,r.clone())
          } else { x.clone() }
       },
       RelogTerm::Compound(x,xs) => {
@@ -155,11 +221,11 @@ fn relog_reify(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) -> RelogTer
    }
 }
 
-fn unpack_bindings(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) {
+fn unpack_bindings(ctx: &Rc<Context>, x: RelogTerm) {
    match x {
       RelogTerm::Compound(g,gs) => {
          if g=="Bind" && gs.len()==2 {
-            ctx.insert( gs[0].clone(), gs[1].clone() );
+            Context::insert(&ctx, gs[0].clone(), gs[1].clone() );
          }
          for gx in gs.iter() {
             unpack_bindings(ctx, gx.clone());
@@ -171,18 +237,21 @@ fn unpack_bindings(ctx: &mut HashMap<RelogTerm,RelogTerm>, x: RelogTerm) {
 
 pub fn relog(s: &str) -> String {
    let p = parse_relog_prog(s);
-   let mut ctx: HashMap<RelogTerm,RelogTerm> = p.bindings.into_iter().collect();
+   let ctx = Context::new();
+   for (k,v) in p.bindings {
+      Context::insert(&ctx, k, v);
+   }
    for (l,r) in p.unifications {
-      let l = relog_apply(&mut ctx, l.clone());
-      let r = relog_apply(&mut ctx, r.clone());
-      let x = relog_unify(&mut ctx, l.clone(), r.clone());
+      let l = relog_apply(&ctx, l.clone());
+      let r = relog_apply(&ctx, r.clone());
+      let x = relog_unify(&ctx, l.clone(), r.clone());
       if x == RelogTerm::Reject {
          return RelogTerm::Reject.to_string();
       }
-      unpack_bindings(&mut ctx, x);
+      unpack_bindings(&ctx, x);
    }
-   let r = relog_apply(&mut ctx, p.returns);   
-   relog_reify(&mut ctx, r).to_string()
+   let r = relog_apply(&ctx, p.returns);   
+   relog_reify(&ctx, r).to_string()
 }
 
 #[cfg(test)]

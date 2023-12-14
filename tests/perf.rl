@@ -24,4 +24,4 @@ W<x,y> := X<Y<x,y>,Y<x,y>>;
 X<x,y> := Y<Z<x,y>,Z<x,y>>;
 Y<x,y> := Z<x,y>;
 Z<x,y> := 123xyz;
-Z<1,23>
+A<1,23>
