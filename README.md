@@ -49,7 +49,8 @@ Pair<a,a>
 An example program might represent the application of a function `a -> Maybe<a>` with argument `Int` which would look like below:
 
 ```
-a=Int;Maybe<a>
+a=Int;
+Maybe<a>
 ```
 
 when running this program the unification will bind `Int` to `a` and return the result `Maybe<Int>`.
