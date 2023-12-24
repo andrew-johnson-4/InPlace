@@ -3,6 +3,8 @@ An implementation of several strongly-normalizing string rewriting systems
 
 # Relog (Reduction Logic) Flavor
 
+[Link to Documentation Website](https://medium.com/@andrew_johnson_4/an-introduction-to-reduction-logic-relog-c31b6b4e95a4)
+
 ```relog
 a = Int;
 List<a>
