@@ -1,7 +1,7 @@
 # InPlace
 An implementation of several strongly-normalizing string rewriting systems
 
-# Relog Flavor
+# Relog (Reduction Logic) Flavor
 
 ```relog
 a = Int;
