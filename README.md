@@ -4,15 +4,18 @@ An implementation of several strongly-normalizing string rewriting systems
 # Relog Flavor
 
 ```relog
-a=Int;List<a>
+a = Int;
+List<a>
 ---output----
 List<Int>
 
-A<b,C<d>>=A<Int,C<Bool>>;R<b>
+A<b,C<d>> = A<Int,C<Bool>>;
+R<b>
 ---output-------------------
 R<Int>
 
-A<b,c>:=R<c>;A<B,C>
+A<b,c> := R<c>;
+A<B,C>
 ---output----------
 R<C>
 
