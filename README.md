@@ -49,7 +49,7 @@ Pair<a,a>
 An example program might represent the application of a function `a -> Maybe<a>` with argument `Int` which would look like below:
 
 ```
-a=Int;
+a = Int;
 Maybe<a>
 ```
 
