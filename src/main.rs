@@ -12,13 +12,16 @@ the code and IP as they would like. Please, just be nice.
 use relog::relog;
 
 pub fn main() {
+   let mut recurse = false;
    for a in std::env::args().skip(1) {
-      if a.ends_with(".rl") {
+      if a=="--recurse" {
+         recurse = true;
+      } else if a.ends_with(".rl") {
          let contents = std::fs::read_to_string(&a)
          .expect(&format!("no such file: {}", a));
-         println!("{}", relog(&contents));
+         println!("{}", relog(recurse, &contents));
       } else {
-         println!("{}", relog(&a));
+         println!("{}", relog(recurse, &a));
       }
    }
 }

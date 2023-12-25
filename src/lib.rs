@@ -14,6 +14,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap,HashSet};
 
 struct Context {
+   recurse: bool,
    parent: Option<Rc<Context>>,
    block: RefCell<HashSet<RelogTerm>>,
    bind: RefCell<HashMap<RelogTerm,RelogTerm>>,
@@ -41,10 +42,13 @@ impl Context {
       slf.bind.borrow_mut().insert(k, v); ()
    }
    fn remove(slf: &Rc<Context>, k: &RelogTerm) {
-      slf.block.borrow_mut().insert(k.clone()); ()
+      if !slf.recurse {
+         slf.block.borrow_mut().insert(k.clone());
+      }; ()
    }
    fn clone(slf: &Rc<Context>) -> Rc<Context> {
       Rc::new(Context {
+         recurse: slf.recurse,
          parent: Some(slf.clone()),
          block: RefCell::new(HashSet::new()),
          bind: RefCell::new(HashMap::new()),
@@ -52,6 +56,15 @@ impl Context {
    }
    fn new() -> Rc<Context> {
       Rc::new(Context {
+         recurse: false,
+         parent: None,
+         block: RefCell::new(HashSet::new()),
+         bind: RefCell::new(HashMap::new()),
+      })
+   }
+   fn recurse() -> Rc<Context> {
+      Rc::new(Context {
+         recurse: true,
          parent: None,
          block: RefCell::new(HashSet::new()),
          bind: RefCell::new(HashMap::new()),
@@ -235,9 +248,13 @@ fn unpack_bindings(ctx: &Rc<Context>, x: RelogTerm) {
    }
 }
 
-pub fn relog(s: &str) -> String {
+pub fn relog(cfg: bool, s: &str) -> String {
    let p = parse_relog_prog(s);
-   let ctx = Context::new();
+   let ctx = if cfg {
+      Context::recurse()
+   } else {
+      Context::new()
+   };
    for (k,v) in p.bindings {
       Context::insert(&ctx, k, v);
    }
@@ -298,31 +315,31 @@ mod tests {
 
    #[test]
    fn substitution() {
-      assert_eq!(relog("a=Int;T<a>"), "T<Int>");
+      assert_eq!(relog(false, "a=Int;T<a>"), "T<Int>");
    }
 
    #[test]
    fn unification() {
-      assert_eq!(relog("A<b,C<d>>=A<Int,C<Bool>>;R<b>"), "R<Int>");
+      assert_eq!(relog(false, "A<b,C<d>>=A<Int,C<Bool>>;R<b>"), "R<Int>");
    }
 
    #[test]
    fn recursion() {
-      assert_eq!(relog("a=B;c=C<a>;c"), "C<B>");
-      assert_eq!(relog("a=B;c=C<a,a>;c"), "C<B,B>");
-      relog("a=A<a,a>;a");
+      assert_eq!(relog(false, "a=B;c=C<a>;c"), "C<B>");
+      assert_eq!(relog(false, "a=B;c=C<a,a>;c"), "C<B,B>");
+      relog(false, "a=A<a,a>;a");
    }
 
    #[test]
    fn function() {
-      assert_eq!(relog("A<b,c>:=R<c>;A<B,C>"), "R<C>");
-      relog("A<b>:=A<b>;A<B>");
-      relog("A<b>:=B<a>;B<a>:=A<b>;A<B>");
+      assert_eq!(relog(false, "A<b,c>:=R<c>;A<B,C>"), "R<C>");
+      relog(false, "A<b>:=A<b>;A<B>");
+      relog(false, "A<b>:=B<a>;B<a>:=A<b>;A<B>");
    }
 
    #[test]
    fn staged_bindings() {
-      assert_eq!(relog("F<x>:=Bind<G<y>,y>;x=F<1>;x"), "Bind<G<y>,y>");
-      assert_eq!(relog("F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z"), "2");
+      assert_eq!(relog(false, "F<x>:=Bind<G<y>,y>;x=F<1>;x"), "Bind<G<y>,y>");
+      assert_eq!(relog(false, "F<x>:=Bind<G<y>,y>;_=F<1>;z=G<2>;z"), "2");
    }
 }
