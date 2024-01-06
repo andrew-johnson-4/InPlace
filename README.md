@@ -1,4 +1,4 @@
-# [InPlace](https://github.com/andrew-johnson-4/InPlace/wiki)
+# [Relog](https://github.com/andrew-johnson-4/InPlace/wiki)
 An implementation of several strongly-normalizing string rewriting systems
 
 # Relog (Reduction Logic) Flavor
